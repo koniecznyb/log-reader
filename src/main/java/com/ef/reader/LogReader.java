@@ -1,29 +1,41 @@
 package com.ef.reader;
 
-import java.time.Duration;
-import java.time.LocalDate;
+import com.ef.LogEntry;
+import lombok.AllArgsConstructor;
+
+import java.time.LocalDateTime;
 import java.util.HashMap;
-import java.util.Optional;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+@AllArgsConstructor
 public class LogReader {
 
-    private HashMap<String, Integer> ipCache = new HashMap<>();
-    String delimiter = "|";
+    private final LocalDateTime startDate;
+    private final LocalDateTime endDate;
+    private final int threshold;
 
-    public Stream<String> findIpAddresses(Stream<String> input, Duration duration, int threshold){
-        input
+    public List<LogEntry> findIpAddresses(Stream<String> logFileStream) {
+        final String delimiter = "[|]";
+        final HashMap<String, Integer> ipCache = new HashMap<>();
+
+        return logFileStream
                 .map(entry -> entry.split(delimiter))
-                .filter(splitEntry -> splitEntry[0])
-                .map(strings -> {
-                    String ip = strings[1];
-                    String date = strings[0];
-
-                    if(ipCache.containsKey(ip) && (ipCache.get(ip) >= threshold) ){
-                        return input;
-                    }
-                });
+                .map(LogEntry::fromStringArray)
+                .filter(logEntry -> logEntry.isWithinTimePeriod(startDate, endDate))
+                .filter(logEntry -> isRequestsCountAboveThreshold(ipCache, logEntry.getIp()))
+                .map(logEntry -> LogEntry.withOccurrenceCount(logEntry, ipCache.get(logEntry.getIp())))
+                .collect(Collectors.toList());
     }
 
-    private boolean isWithinTimePeriod(LocalDate startTime, LocalDate endTime, LocalDate )
+    private boolean isRequestsCountAboveThreshold(HashMap<String, Integer> ipCache, String requestIP) {
+        return ipCache.compute(requestIP, this::incrementIfExists) >= threshold;
+    }
+
+    private Integer incrementIfExists(String __, Integer count) {
+        return count == null ? 0 : count + 1;
+    }
+
 }
