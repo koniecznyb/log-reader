@@ -1,6 +1,7 @@
 package com.ef;
 
 import com.ef.database.DatabaseClient;
+import com.ef.database.DatabaseService;
 import com.ef.reader.LogReader;
 import picocli.CommandLine;
 
@@ -21,7 +22,7 @@ import java.util.stream.Stream;
         name = "java cp parser.jar com.ef.Parser")
 public class Parser implements Callable<Void> {
 
-    @CommandLine.Option(names = "--accesslog", description = "log file", required = true)
+    @CommandLine.Option(names = "--accesslog", description = "log file which will be saved to database")
     private static String logFilePath;
 
     @CommandLine.Option(names = "--startDate", description = "is of \"yyyy-MM-dd.HH:mm:ss\" format", required = true)
@@ -41,16 +42,23 @@ public class Parser implements Callable<Void> {
     public Void call() throws Exception {
         Duration duration = parseDuration(durationInput);
         LocalDateTime startDate = parseStartDate(startDateInput);
-        Stream<String> logFile = streamLogFile(logFilePath);
 
-        ParserImpl parser = new ParserImpl(new DatabaseClient(), new LogReader(startDate, startDate.plus(duration), threshold));
-        parser.parse(logFile);
+//        Dependency injection
+        ParserImpl parser = new ParserImpl(
+                new DatabaseService(new DatabaseClient("jdbc:mysql://localhost:3306/logreader", "user", "password")),
+                new LogReader(),
+                duration, startDate, threshold
+        );
+        parser.execute(streamLogFile(logFilePath));
+
         return null;
     }
 
     private Stream<String> streamLogFile(String logFilePath) {
         try {
-            return Files.lines(Paths.get(logFilePath));
+            return logFilePath == null
+                    ? Stream.empty()
+                    : Files.lines(Paths.get(logFilePath));
         } catch (IOException e) {
             throw new IllegalArgumentException("Could not find provided file");
         }
