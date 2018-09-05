@@ -7,6 +7,7 @@ import lombok.AllArgsConstructor;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 
@@ -22,12 +23,15 @@ public class ParserImpl {
 
 
     public void execute(Stream<String> streamLogFile) {
-        List<LogEntry> logEntries = logReader.mapToLogEntry(streamLogFile);
+        List<AccessRequestEntry> logEntries = logReader.mapToLogEntryList(streamLogFile);
         databaseService.persistLogFile(logEntries);
 
-        databaseService
+        List<AccessRequestEntry> bannedIpAddresses = databaseService
                 .findMultipleRequestsBetween(startDate, startDate.plus(duration), threshold)
-                .map(databaseService::persistBlockedIpAddress)
+                .map(AccessRequestEntry::bannedEntryWithReason)
+                .collect(Collectors.toList());
+
+        databaseService.persistBlockedIpAddress(bannedIpAddresses)
                 .forEach(System.out::println);
     }
 }

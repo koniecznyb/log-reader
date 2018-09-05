@@ -12,7 +12,6 @@ CREATE TABLE IF NOT EXISTS `logs` (
 CREATE TABLE IF NOT EXISTS `banned_ips` (
 	`id` int(10) NOT NULL auto_increment,
 	`ip_address` varchar(255),
-	`date` datetime,
 	`reason` text,
 	PRIMARY KEY( `id` )
 ) COMMENT='banned ips populated by log reader tool';
