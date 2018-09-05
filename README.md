@@ -26,7 +26,7 @@ Move and rename built package
 mv target/parser-1.0-SNAPSHOT-jar-with-dependencies.jar parser.jar
 ```
 
-To persist log file and find blocked IP addresses:
+To persist log file and find blocked IP addresses
 ```bash
 java -cp "parser.jar" com.ef.Parser --accessfile=accesslog --startDate=2017-01-01.00:00:00 --duration=daily --threshold=500
 ```

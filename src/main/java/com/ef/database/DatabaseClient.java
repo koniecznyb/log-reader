@@ -3,7 +3,10 @@ package com.ef.database;
 import com.ef.AccessRequestEntry;
 import lombok.AllArgsConstructor;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
@@ -11,16 +14,13 @@ import java.util.function.Function;
 @AllArgsConstructor
 public class DatabaseClient {
 
-    private String url;
-    private String user;
-    private String password;
+    private DriverManagerWrapper driverManagerWrapper;
 
     private List<AccessRequestEntry> executeInDatabase(Function<Connection, List<AccessRequestEntry>> action) {
-        try (Connection connection = DriverManager.getConnection(url, user, password)) {
+        try (Connection connection = driverManagerWrapper.getConnection()) {
             return action.apply(connection);
         } catch (SQLException e) {
-            System.out.println(e.getMessage());
-            return null;
+            throw new RuntimeException(e);
         }
     }
 

@@ -17,21 +17,30 @@ public class ParserImpl {
     private DatabaseService databaseService;
     private LogReader logReader;
 
-    private Duration duration;
-    private LocalDateTime startDate;
-    private int threshold;
 
+    public void persistLogFileIfPresent(Stream<String> logFile) {
+        List<AccessRequestEntry> logEntries = logReader.mapToLogEntryList(logFile);
+        if (!logEntries.isEmpty()) {
+            databaseService.persistLogFile(logEntries);
+        }
+    }
 
-    public void execute(Stream<String> streamLogFile) {
-        List<AccessRequestEntry> logEntries = logReader.mapToLogEntryList(streamLogFile);
-        databaseService.persistLogFile(logEntries);
-
-        List<AccessRequestEntry> bannedIpAddresses = databaseService
+    public List<AccessRequestEntry> findBannedIpAddresses(Duration duration, LocalDateTime startDate, int threshold) {
+        return databaseService
                 .findMultipleRequestsBetween(startDate, startDate.plus(duration), threshold)
                 .map(AccessRequestEntry::bannedEntryWithReason)
                 .collect(Collectors.toList());
-
-        databaseService.persistBlockedIpAddress(bannedIpAddresses)
-                .forEach(System.out::println);
     }
+
+    public List<String> persistBannedAddresses(List<AccessRequestEntry> accessRequestEntries) {
+        return databaseService
+                .persistBlockedIpAddress(accessRequestEntries)
+                .stream()
+                .map(accessRequestEntry -> String.format("Blocked ipAddress=%s reason=%s",
+                        accessRequestEntry.getIp(),
+                        accessRequestEntry.getBanReason()
+                ))
+                .collect(Collectors.toList());
+    }
+
 }

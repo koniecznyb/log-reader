@@ -2,6 +2,7 @@ package com.ef;
 
 import com.ef.database.DatabaseClient;
 import com.ef.database.DatabaseService;
+import com.ef.database.DriverManagerWrapper;
 import com.ef.reader.LogReader;
 import picocli.CommandLine;
 
@@ -12,6 +13,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.stream.Stream;
 
@@ -42,16 +44,28 @@ public class Parser implements Callable<Void> {
     public Void call() throws Exception {
         Duration duration = parseDuration(durationInput);
         LocalDateTime startDate = parseStartDate(startDateInput);
+        Stream<String> logFile = streamLogFile(logFilePath);
 
 //        Dependency injection
         ParserImpl parser = new ParserImpl(
-                new DatabaseService(new DatabaseClient("jdbc:mysql://localhost:3306/logreader", "user", "password")),
-                new LogReader(),
-                duration, startDate, threshold
+                new DatabaseService(new DatabaseClient(new DriverManagerWrapper(
+                        "jdbc:mysql://localhost:3306/logreader",
+                        "user",
+                        "password"
+                ))),
+                new LogReader()
         );
-        parser.execute(streamLogFile(logFilePath));
 
+        parser.persistLogFileIfPresent(logFile);
+        List<AccessRequestEntry> bannedIpAddresses = parser.findBannedIpAddresses(duration, startDate, threshold);
+        parser
+                .persistBannedAddresses(bannedIpAddresses)
+                .forEach(this::logBannedAddresses);
         return null;
+    }
+
+    private void logBannedAddresses(String message) {
+        System.out.println(message);
     }
 
     private Stream<String> streamLogFile(String logFilePath) {
