@@ -31,7 +31,7 @@ To persist log file and find blocked IP addresses
 java -cp "parser.jar" com.ef.Parser --accessfile=accesslog --startDate=2017-01-01.00:00:00 --duration=daily --threshold=500
 ```
 
-To only look for addresses
+To only look for addresses in the database
 ```bash
 java -cp "parser.jar" com.ef.Parser --startDate=2017-01-01.00:00:00 --duration=daily --threshold=500
 ```
